@@ -113,10 +113,9 @@
             android:id="@+id/voice_input"
             android:layout_width="48dp"
             android:layout_height="48dp"
-            android:layout_marginStart="8dp"
             android:contentDescription="Voice Input"
-            android:padding="8dp"
-            android:src="@drawable/ic_microphone" />
+            android:src="@drawable/ic_microphone" /> <!-- Add microphone icon drawable -->
+
 
         <!-- Headphone Icon (Assuming it’s for some additional feature) -->
         <ImageView
