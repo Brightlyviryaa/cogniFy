@@ -1,19 +1,132 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
-    android:id="@+id/main"
+<RelativeLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".MainActivity">
+    android:background="@android:color/white">
 
-    <TextView
-        android:layout_width="wrap_content"
+    <!-- Top Navigation Bar -->
+    <LinearLayout
+        android:id="@+id/top_navigation"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Hello World!"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        android:orientation="horizontal"
+        android:padding="16dp"
+        android:gravity="center_vertical">
 
-</androidx.constraintlayout.widget.ConstraintLayout>
+        <!-- Hamburger Menu Icon -->
+        <ImageView
+            android:id="@+id/menu_icon"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:contentDescription="Menu Icon"
+            android:src="@drawable/ic_menu" /> <!-- Use a menu icon drawable here -->
+
+        <!-- App Logo or Name -->
+        <TextView
+            android:id="@+id/app_name"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:layout_marginStart="16dp"
+            android:text="CogniFy"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            android:textColor="@android:color/black" />
+
+        <!-- Sign Up Button -->
+        <Button
+            android:id="@+id/signup_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:backgroundTint="@android:color/black"
+            android:text="Daftar"
+            android:textColor="@android:color/white" />
+    </LinearLayout>
+
+    <!-- Suggestions Row -->
+    <HorizontalScrollView
+        android:id="@+id/suggestions_row"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingHorizontal="16dp"
+        android:paddingVertical="8dp"
+        android:layout_above="@+id/message_input_section"
+        android:scrollbars="none">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal">
+
+            <!-- First Suggestion Button -->
+            <Button
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@drawable/suggestion_button_background"
+                android:text="Buatkan kalender konten untuk akun TikTok"
+                android:paddingHorizontal="16dp"
+                android:textColor="@android:color/black" />
+
+            <!-- Spacing between suggestion buttons -->
+            <Space
+                android:layout_width="16dp"
+                android:layout_height="wrap_content" />
+
+            <!-- Second Suggestion Button -->
+            <Button
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@drawable/suggestion_button_background"
+                android:text="Rencanakan untuk menik"
+                android:paddingHorizontal="16dp"
+                android:textColor="@android:color/black" />
+        </LinearLayout>
+    </HorizontalScrollView>
+
+    <!-- Bottom Message Input Section -->
+    <LinearLayout
+        android:id="@+id/message_input_section"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:padding="16dp"
+        android:layout_alignParentBottom="true">
+
+        <!-- Message Input EditText -->
+        <EditText
+            android:id="@+id/message_input"
+            android:layout_width="0dp"
+            android:layout_height="48dp"
+            android:layout_weight="1"
+            android:hint="Pesan"
+            android:padding="12dp"
+            android:background="@drawable/input_background"
+            android:textColor="@android:color/black"
+            android:textSize="16sp"
+            android:inputType="textMultiLine" />
+
+        <!-- Microphone Icon for Voice Input -->
+        <ImageView
+            android:id="@+id/voice_input"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_marginStart="8dp"
+            android:contentDescription="Voice Input"
+            android:padding="8dp"
+            android:src="@drawable/ic_microphone" />
+
+        <!-- Headphone Icon (Assuming it’s for some additional feature) -->
+        <ImageView
+            android:id="@+id/headphone_icon"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_marginStart="8dp"
+            android:contentDescription="Headphone Icon"
+            android:padding="8dp"
+            android:src="@drawable/ic_headphone" />
+    </LinearLayout>
+
+</RelativeLayout>

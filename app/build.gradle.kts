@@ -48,10 +48,10 @@ dependencies {
     androidTestImplementation(libs.androidx.espresso.core)
 
     //Firebase Dependencies
-    implementation(platform("com.google.firebase:firebase-bom:33.5.0"))
+    implementation(platform("com.google.firebase:firebase-bom:33.5.1"))
     implementation("com.google.firebase:firebase-analytics")
     implementation("com.google.firebase:firebase-auth-ktx")
     implementation("com.google.firebase:firebase-firestore-ktx")
     implementation("com.google.firebase:firebase-storage-ktx")
-    implementation("com.google.android.gms:play-services-auth:20.5.0")
+    implementation("com.google.android.gms:play-services-auth:21.2.0")
 }
