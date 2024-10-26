@@ -16,7 +16,7 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var auth: FirebaseAuth
     private lateinit var signupButton: Button
-    private lateinit var clearDocumentButton: Button
+    private lateinit var clearDocumentButton: ImageView  // Changed to ImageView
     private lateinit var profileButton: ImageView
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -28,7 +28,7 @@ class MainActivity : AppCompatActivity() {
 
         // Link UI elements
         signupButton = findViewById(R.id.signup_button)
-        clearDocumentButton = findViewById(R.id.clear_document_button)
+        clearDocumentButton = findViewById(R.id.clear_document_button)  // Set as ImageView
         profileButton = findViewById(R.id.profile_button)
 
         // Check if user is logged in
