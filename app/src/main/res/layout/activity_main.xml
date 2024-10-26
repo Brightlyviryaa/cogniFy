@@ -35,7 +35,7 @@
             android:textStyle="bold"
             android:textColor="@android:color/black" />
 
-        <!-- Sign Up Button -->
+        <!-- Sign Up Button (shown when logged out) -->
         <Button
             android:id="@+id/signup_button"
             android:layout_width="wrap_content"
@@ -43,6 +43,26 @@
             android:backgroundTint="@android:color/black"
             android:text="Daftar"
             android:textColor="@android:color/white" />
+
+        <!-- Clear Document Button (shown when logged in) -->
+        <ImageView
+            android:id="@+id/clear_document_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:src="@drawable/ic_clear_document"
+            android:contentDescription="Clear Document"
+            android:visibility="gone" />
+
+        <!-- Profile Icon Button (shown when logged in) -->
+        <ImageView
+            android:id="@+id/profile_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:src="@drawable/ic_profile"
+            android:contentDescription="Profile Icon"
+            android:visibility="gone" />
     </LinearLayout>
 
     <!-- Suggestions Row -->
