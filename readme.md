@@ -8,6 +8,17 @@
 - **Multibahasa:** Dukung berbagai bahasa untuk komunikasi yang lebih luas.
 - **Kustomisasi:** Sesuaikan pengalaman Anda dengan pengaturan yang fleksibel.
 - **Riwayat Chat:** Simpan percakapan untuk referensi di masa mendatang.
+- **AI Vision:** Analisa gambar yang kamu upload (terbatas).
+- **Talk to AI:** Dengan teknologi Speech to Text dan Text to Speech memberikan pengalaman berbicara secara langsung dengan AI.
+
+## Kelompok 6 - CogniFy: ChatGPT Clone with Official API
+
+| Nama                  | NIM         |
+| --------------------- | ----------- |
+| Brightly Virya        | 00000068227 |
+| Malvin Wijaya         | 00000080948 |
+| Anastasia Br Sidebang | 00000083222 |
+| Vanesa Dwi Lestari    | 00000071818 |
 
 ## Berkontribusi
 
@@ -27,18 +38,10 @@ Kami sangat senang menyambut kontribusi dari siapa saja! Berikut cara kamu bisa 
 
 **Terima kasih** atas kontribusimu!
 
-## Lisensi
-
-Proyek ini dilisensikan di bawah MIT License. Lihat file LICENSE untuk detail lebih lanjut.
-
 ## ️ Teknologi yang Digunakan
 
+- **Android Studio (Kotlin):** Platform utama pengembangan aplikasi, memastikan performa dan kompatibilitas Android.
+- **Firebase Firestore:** Database NoSQL yang fleksibel untuk penyimpanan data real-time.
+- **Firebase Storage:** Penyimpanan file media dengan integrasi langsung ke aplikasi.
+- **Firebase Authentication:** Mengelola otentikasi pengguna dengan aman dan efisien.
 - **OpenAI API:** Menyediakan akses ke model bahasa AI canggih yang mendukung berbagai fitur seperti generasi teks, terjemahan, dan banyak lagi.
-- **[Teknologi Frontend lainnya, misal: React, Vue]:** Menangani tampilan antarmuka pengguna yang interaktif dan dinamis.
-- **[Teknologi Backend lainnya, misal: Node.js, Express]:** Mengelola logika server, mengelola database, dan menangani permintaan API.
-
-**[Tambahkan teknologi lain yang relevan dengan proyekmu]**
-
-**Ingin tahu lebih lanjut tentang cara berkontribusi?** Jangan ragu untuk menghubungi kami:
-
-- **Email:** email@example.com
