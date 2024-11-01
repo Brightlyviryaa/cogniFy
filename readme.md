@@ -2,6 +2,8 @@
 
 **CogniFy** adalah aplikasi web interaktif yang memungkinkan Anda berinteraksi dengan model bahasa AI canggih seperti ChatGPT. Dibangun menggunakan OpenAI API, CogniFy menawarkan pengalaman percakapan yang alami dan informatif.
 
+**link documentasi** 1 (Authentication): https://youtu.be/MVFg9u5K1FU
+
 ## Fitur Utama
 
 - **Percakapan Alami:** Berinteraksi dengan AI seolah-olah sedang berbicara dengan teman.
