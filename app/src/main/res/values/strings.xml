@@ -1,4 +1,10 @@
 <resources>
     <string name="app_name">CogniFy</string>
     <string name="default_web_client_id">880362125506-v5879m3qf7ulvvv8mf4cc7pht594de5c.apps.googleusercontent.com</string>
+    <string name="send">Send</string>
+    <string name="menu">Menu</string>
+    <string name="profile">Profile</string>
+    <string name="clear_document">Clear Document</string>
+    <string name="type_message">Type a message</string>
+    <string name="sign_up">Sign Up</string>
 </resources>

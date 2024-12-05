@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.Cognify" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <!-- Warna Primer -->
+        <item name="colorPrimary">@color/colorPrimary</item>
+        <!-- Warna Primer Varian -->
+        <item name="colorPrimaryDark">@color/colorPrimaryVariant</item>
+        <!-- Warna Aksen -->
+        <item name="colorAccent">@color/colorSecondary</item>
+        <!-- Warna Teks pada Warna Primer -->
+        <item name="android:textColorPrimary">@color/colorOnPrimary</item>
+        <!-- Warna Teks pada Warna Sekunder -->
+        <item name="android:textColorSecondary">@color/colorOnSecondary</item>
+    </style>
+</resources>

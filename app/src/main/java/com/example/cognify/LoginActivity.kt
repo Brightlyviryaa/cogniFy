@@ -1,3 +1,5 @@
+// src/main/java/com/example/cognify/LoginActivity.kt
+
 package com.example.cognify
 
 import android.content.Intent
@@ -54,7 +56,6 @@ class LoginActivity : AppCompatActivity() {
         }
     }
 
-    // Function to log in user with Firebase Authentication
     // Function to log in user with Firebase Authentication
     private fun loginUser(email: String, password: String) {
         auth.signInWithEmailAndPassword(email, password)

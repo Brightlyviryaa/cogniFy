@@ -50,6 +50,12 @@ dependencies {
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
+    implementation ("com.google.android.material:material:1.9.0")
+    implementation ("com.squareup.retrofit2:retrofit:2.9.0")
+    implementation ("com.squareup.retrofit2:converter-gson:2.9.0")
+
+    // RecyclerView
+    implementation ("androidx.recyclerview:recyclerview:1.3.1")
 
     //Firebase Dependencies
     implementation(platform("com.google.firebase:firebase-bom:33.5.1"))

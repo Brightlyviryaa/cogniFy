@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
@@ -19,26 +20,40 @@
         android:layout_marginBottom="24dp" />
 
     <!-- Email Input Field -->
-    <EditText
-        android:id="@+id/emailInput"
+    <com.google.android.material.textfield.TextInputLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:hint="Alamat email"
-        android:inputType="textEmailAddress"
-        android:padding="10dp"
-        android:layout_marginBottom="12dp"
-        android:background="@drawable/input_background" />
+        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+        android:layout_marginBottom="12dp">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/emailInput"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:inputType="textEmailAddress"
+            android:padding="12dp"
+            android:textColor="@android:color/black"
+            android:textColorHint="@android:color/darker_gray" />
+    </com.google.android.material.textfield.TextInputLayout>
 
     <!-- Password Input Field -->
-    <EditText
-        android:id="@+id/passwordInput"
+    <com.google.android.material.textfield.TextInputLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:hint="Sandi"
-        android:inputType="textPassword"
-        android:padding="10dp"
-        android:layout_marginBottom="8dp"
-        android:background="@drawable/input_background" />
+        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+        android:layout_marginBottom="8dp">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/passwordInput"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:inputType="textPassword"
+            android:padding="12dp"
+            android:textColor="@android:color/black"
+            android:textColorHint="@android:color/darker_gray" />
+    </com.google.android.material.textfield.TextInputLayout>
 
     <!-- Forgot Password Text -->
     <TextView
@@ -47,7 +62,8 @@
         android:layout_height="wrap_content"
         android:text="Lupa sandi?"
         android:textSize="14sp"
-        android:layout_marginBottom="16dp" />
+        android:layout_marginBottom="16dp"
+        android:textColor="@android:color/holo_blue_dark" />
 
     <!-- Login Button -->
     <Button
@@ -67,7 +83,7 @@
         android:text="Belum punya akun? Daftar"
         android:textSize="14sp"
         android:layout_gravity="center_horizontal"
-        android:layout_marginTop="8dp" />
-
+        android:layout_marginTop="8dp"
+        android:textColor="@android:color/holo_blue_dark" />
 
 </LinearLayout>
