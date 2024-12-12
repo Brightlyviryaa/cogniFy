@@ -1,70 +1,97 @@
 package com.example.cognify
 
-import android.Manifest
+import android.app.Dialog
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.os.Bundle
-import android.speech.RecognizerIntent
-import android.speech.SpeechRecognizer
-import android.speech.SpeechRecognizer.RESULTS_RECOGNITION
-import android.widget.EditText
+import android.view.LayoutInflater
+import android.view.View
+import android.widget.Button
 import android.widget.ImageView
+import android.widget.LinearLayout
 import android.widget.Toast
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
-import com.example.cognify.R
+import com.google.firebase.auth.FirebaseAuth
 
 class MainActivity : AppCompatActivity() {
 
-    private lateinit var speechRecognizer: SpeechRecognizer
-    private lateinit var messageInput: EditText
+    private lateinit var auth: FirebaseAuth
+    private lateinit var signupButton: Button
+    private lateinit var clearDocumentButton: ImageView  // Changed to ImageView
+    private lateinit var profileButton: ImageView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        messageInput = findViewById(R.id.message_input)
-        val voiceInputButton: ImageView = findViewById(R.id.voice_input)
+        // Initialize Firebase Authentication instance
+        auth = FirebaseAuth.getInstance()
 
-        // Check for microphone permission
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.RECORD_AUDIO), 1)
+        // Link UI elements
+        signupButton = findViewById(R.id.signup_button)
+        clearDocumentButton = findViewById(R.id.clear_document_button)  // Set as ImageView
+        profileButton = findViewById(R.id.profile_button)
+
+        // Check if user is logged in
+        if (auth.currentUser != null) {
+            showLoggedInUI()
+        } else {
+            showLoggedOutUI()
         }
 
-        // Initialize SpeechRecognizer
-        speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this)
-
-        voiceInputButton.setOnClickListener {
-            startVoiceRecognition()
+        signupButton.setOnClickListener {
+            showLoginRegisterDialog()
         }
-    }
 
-    private fun startVoiceRecognition() {
-        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
-        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, "id-ID") // Set Indonesian language, change if needed
-        intent.putExtra(RecognizerIntent.EXTRA_PROMPT, "Silakan berbicara...")
+        clearDocumentButton.setOnClickListener {
+            clearDocument()
+        }
 
-        // Start listening for voice input
-        startActivityForResult(intent, REQUEST_CODE_SPEECH_INPUT)
-    }
-
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == REQUEST_CODE_SPEECH_INPUT && resultCode == RESULT_OK) {
-            val result = data?.getStringArrayListExtra(RESULTS_RECOGNITION)
-            if (result != null && result.isNotEmpty()) {
-                // Set the recognized text to the EditText
-                messageInput.setText(result[0])
-            } else {
-                Toast.makeText(this, "Tidak ada input suara", Toast.LENGTH_SHORT).show()
-            }
+        profileButton.setOnClickListener {
+            startActivity(Intent(this, EditProfileActivity::class.java))
         }
     }
 
-    companion object {
-        private const val REQUEST_CODE_SPEECH_INPUT = 100
+    private fun showLoggedInUI() {
+        signupButton.visibility = View.GONE
+        clearDocumentButton.visibility = View.VISIBLE
+        profileButton.visibility = View.VISIBLE
+    }
+
+    private fun showLoggedOutUI() {
+        signupButton.visibility = View.VISIBLE
+        clearDocumentButton.visibility = View.GONE
+        profileButton.visibility = View.GONE
+    }
+
+    private fun showLoginRegisterDialog() {
+        val dialog = Dialog(this)
+        val view = LayoutInflater.from(this).inflate(R.layout.dialog_login_register, null)
+        dialog.setContentView(view)
+
+        // Set dialog dimensions
+        dialog.window?.setLayout(
+            (resources.displayMetrics.widthPixels * 0.85).toInt(),
+            LinearLayout.LayoutParams.WRAP_CONTENT
+        )
+
+        val loginButton = view.findViewById<Button>(R.id.loginButton)
+        val registerButton = view.findViewById<Button>(R.id.registerButton)
+
+        loginButton.setOnClickListener {
+            startActivity(Intent(this, LoginActivity::class.java))
+            dialog.dismiss()
+        }
+
+        registerButton.setOnClickListener {
+            startActivity(Intent(this, RegisterActivity::class.java))
+            dialog.dismiss()
+        }
+
+        dialog.show()
+    }
+
+    private fun clearDocument() {
+        Toast.makeText(this, "Document cleared!", Toast.LENGTH_SHORT).show()
+        // Implement the clear document logic here if needed
     }
 }

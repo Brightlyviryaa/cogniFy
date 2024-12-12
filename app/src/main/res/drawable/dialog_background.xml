@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Shadow layer with reduced offset and radius -->
+    <item android:right="1dp" android:left="1dp" android:top="1dp" android:bottom="2dp">
+        <shape android:shape="rectangle">
+            <solid android:color="#B0B0B0" /> <!-- Shadow color -->
+            <corners android:radius="20dp" />
+        </shape>
+    </item>
+
+    <!-- Main background layer with stroke and inset for perfect alignment -->
+    <item android:bottom="1dp" android:top="1dp" android:left="1dp" android:right="1dp">
+        <shape android:shape="rectangle">
+            <solid android:color="#FFFFFF" />
+            <corners android:radius="20dp" />
+            <stroke android:width="2dp" android:color="#000000" />
+        </shape>
+    </item>
+</layer-list>
