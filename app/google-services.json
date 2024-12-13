@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "880362125506",
+    "project_id": "cognify-22a99",
+    "storage_bucket": "cognify-22a99.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:880362125506:android:e63a7c545c5859a645235b",
+        "android_client_info": {
+          "package_name": "com.example.cognify"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "880362125506-904k7ikout88llvg2j98lre90b6it4p8.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.cognify",
+            "certificate_hash": "c389ddddb57e7d3a1f1dfcc17bb9e705733d2312"
+          }
+        },
+        {
+          "client_id": "880362125506-v5879m3qf7ulvvv8mf4cc7pht594de5c.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDMERRG7yIrmO1uk9kqea7cB4VAl5bmJBo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "880362125506-v5879m3qf7ulvvv8mf4cc7pht594de5c.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
