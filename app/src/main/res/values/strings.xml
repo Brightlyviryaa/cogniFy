@@ -7,4 +7,6 @@
     <string name="clear_document">Clear Document</string>
     <string name="type_message">Type a message</string>
     <string name="sign_up">Sign Up</string>
+    <string name="take_photo">Photo</string>
+    <string name="cognify_web">Use cognify on cognifyai.my.id for better experience</string>
 </resources>

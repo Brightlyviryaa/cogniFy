@@ -1,13 +1,20 @@
-// src/main/java/com/example/cognify/MainActivity.kt
-
 package com.example.cognify
 
+import android.Manifest
 import android.app.Dialog
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Bundle
+import android.os.Environment
+import android.provider.MediaStore
+import android.util.Log
 import android.view.*
 import android.widget.*
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import androidx.core.view.GravityCompat
 import androidx.drawerlayout.widget.DrawerLayout
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -15,23 +22,19 @@ import androidx.recyclerview.widget.RecyclerView
 import com.example.cognify.adapters.MessageAdapter
 import com.example.cognify.models.ChatSession
 import com.example.cognify.models.Message
-import com.example.cognify.network.OpenAIService
+import com.example.cognify.network.*
 import com.google.android.material.appbar.MaterialToolbar
 import com.google.android.material.navigation.NavigationView
 import com.google.android.material.textfield.TextInputEditText
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.*
-import com.google.gson.JsonArray
-import com.google.gson.JsonObject
-import retrofit2.Retrofit
-import retrofit2.converter.gson.GsonConverterFactory
-import retrofit2.Call
-import retrofit2.Callback
-import retrofit2.Response
-import android.util.Log
-import okhttp3.OkHttpClient
-import java.util.concurrent.TimeUnit
-import java.util.Locale
+import kotlinx.coroutines.*
+import kotlinx.coroutines.tasks.await
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.MultipartBody
+import okhttp3.RequestBody.Companion.asRequestBody
+import java.io.File
+import java.text.SimpleDateFormat
+import java.util.*
 
 class MainActivity : AppCompatActivity() {
 
@@ -45,34 +48,36 @@ class MainActivity : AppCompatActivity() {
     private lateinit var messageInput: TextInputEditText
     private lateinit var userEmailTextView: TextView
 
+    // Daftar pesan & sesi
     private val messagesList = mutableListOf<Message>()
     private val chatSessionsList = mutableListOf<ChatSession>()
 
-    private lateinit var firestore: FirebaseFirestore
-    private var messagesListener: ListenerRegistration? = null
+    // File upload (gambar)
+    private val uploadedFiles = mutableListOf<File>()
 
     private var currentChatId: String? = null
     private var currentUserId: String? = null
 
-    // **IMPORTANT:** Jangan menghardcode API Key di sini untuk keamanan.
-    // Ganti dengan metode penyimpanan API Key yang aman, seperti menggunakan BuildConfig atau lainnya.
-    private val openAIAPIKey = "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" // Ganti dengan API Key Anda
-
-    // Base ID untuk item menu sesi chat dinamis
-    private val MENU_ITEM_CHAT_SESSION_BASE_ID = 1000
-
-    // Tag untuk logging
     private val TAG = "MainActivity"
+    private val activityScope = CoroutineScope(Dispatchers.Main + Job())
+
+    companion object {
+        private const val MENU_ITEM_CHAT_SESSION_BASE_ID = 1000
+
+        private const val REQUEST_IMAGE_CAPTURE = 1
+        private const val REQUEST_CAMERA_PERMISSION = 2
+    }
+
+    private var photoFile: File? = null  // Tempat menyimpan foto dari kamera
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        // Inisialisasi Firebase Authentication dan Firestore
+        // Inisialisasi Firebase
         auth = FirebaseAuth.getInstance()
-        firestore = FirebaseFirestore.getInstance()
 
-        // Menghubungkan elemen UI dengan findViewById
+        // Hubungkan komponen UI
         drawerLayout = findViewById(R.id.drawer_layout)
         navigationView = findViewById(R.id.navigation_view)
         toolbar = findViewById(R.id.toolbar)
@@ -80,28 +85,17 @@ class MainActivity : AppCompatActivity() {
         sendButton = findViewById(R.id.send_button)
         messageInput = findViewById(R.id.message_input)
 
-        // Set up Toolbar
+        // Set up toolbar
         setSupportActionBar(toolbar)
         toolbar.setNavigationOnClickListener {
             drawerLayout.openDrawer(GravityCompat.START)
         }
 
-        // Menangani klik item menu di Toolbar
-        toolbar.setOnMenuItemClickListener { menuItem ->
-            when (menuItem.itemId) {
-                R.id.action_profile -> {
-                    startActivity(Intent(this, EditProfileActivity::class.java))
-                    true
-                }
-                else -> false
-            }
-        }
-
-        // Komponen Navigation Drawer - Akses melalui headerView
+        // Navigation Drawer Header
         val headerView = navigationView.getHeaderView(0)
         userEmailTextView = headerView.findViewById(R.id.user_email)
 
-        // Set up RecyclerView untuk pesan
+        // RecyclerView
         messageAdapter = MessageAdapter(messagesList)
         recyclerView.apply {
             layoutManager = LinearLayoutManager(this@MainActivity).apply {
@@ -110,24 +104,11 @@ class MainActivity : AppCompatActivity() {
             adapter = messageAdapter
         }
 
-        // Listener untuk NavigationView
+        // Listener Navigation Drawer
         navigationView.setNavigationItemSelectedListener { menuItem ->
             when (menuItem.itemId) {
                 R.id.menu_new_chat -> {
-                    createNewChatSession {
-                        // Beralih ke sesi chat baru
-                        // Anda bisa menambahkan logika tambahan di sini jika diperlukan
-                    }
-                    drawerLayout.closeDrawer(GravityCompat.START)
-                    true
-                }
-                R.id.menu_profile -> {
-                    startActivity(Intent(this, EditProfileActivity::class.java))
-                    drawerLayout.closeDrawer(GravityCompat.START)
-                    true
-                }
-                R.id.menu_settings -> {
-                    Toast.makeText(this, "Pengaturan Dipilih", Toast.LENGTH_SHORT).show()
+                    clearSessionState()
                     drawerLayout.closeDrawer(GravityCompat.START)
                     true
                 }
@@ -144,7 +125,8 @@ class MainActivity : AppCompatActivity() {
                     true
                 }
                 else -> {
-                    // Menangani klik sesi chat dinamis
+                    // Bagian dihapus: menu_profile, menu_settings
+                    // ...
                     val chatSessionIndex = menuItem.itemId - MENU_ITEM_CHAT_SESSION_BASE_ID
                     if (chatSessionIndex >= 0 && chatSessionIndex < chatSessionsList.size) {
                         switchChatSession(chatSessionsList[chatSessionIndex])
@@ -155,25 +137,21 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // Listener untuk tombol Kirim
+        // Tombol kirim pesan
         sendButton.setOnClickListener {
             sendMessage()
         }
 
-        // Cek apakah user sudah login
+        // Cek user login
         val currentUser = auth.currentUser
         if (currentUser != null) {
             currentUserId = currentUser.uid
             userEmailTextView.text = currentUser.email
-            showLoggedInUI()
-            loadChatSessions()
-            Log.d(TAG, "User logged in: ${currentUser.email}")
+            checkEmailVerification(currentUser)
         } else {
             showLoggedOutUI()
             Log.d(TAG, "No user logged in")
         }
-
-        // Update menu items berdasarkan status login saat aplikasi dimulai
         updateMenuItems()
     }
 
@@ -183,11 +161,9 @@ class MainActivity : AppCompatActivity() {
         if (currentUser != null && currentUserId == null) {
             currentUserId = currentUser.uid
             userEmailTextView.text = currentUser.email
-            showLoggedInUI()
-            loadChatSessions()
+            checkEmailVerification(currentUser)
             Log.d(TAG, "User logged in: ${currentUser.email}")
         } else if (currentUser == null && currentUserId != null) {
-            // User telah logout
             currentUserId = null
             userEmailTextView.text = ""
             showLoggedOutUI()
@@ -195,31 +171,136 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    // ====================================
+    //     CAMERA INTENT (boleh dipakai)
+    // ====================================
+    private fun openCamera() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
+            != PackageManager.PERMISSION_GRANTED
+        ) {
+            requestPermissions(arrayOf(Manifest.permission.CAMERA), REQUEST_CAMERA_PERMISSION)
+        } else {
+            dispatchTakePictureIntent()
+        }
+    }
+
+    private fun dispatchTakePictureIntent() {
+        val takePictureIntent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
+        if (takePictureIntent.resolveActivity(packageManager) != null) {
+            photoFile = createImageFile()
+            photoFile?.also {
+                val photoURI: Uri = FileProvider.getUriForFile(
+                    this,
+                    "${applicationContext.packageName}.provider",
+                    it
+                )
+                takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT, photoURI)
+                startActivityForResult(takePictureIntent, REQUEST_IMAGE_CAPTURE)
+            }
+        }
+    }
+
+    private fun createImageFile(): File {
+        val timeStamp: String =
+            SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
+        val storageDir: File? = getExternalFilesDir(Environment.DIRECTORY_PICTURES)
+        return File.createTempFile("JPEG_${timeStamp}_", ".jpg", storageDir)
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == REQUEST_IMAGE_CAPTURE && resultCode == RESULT_OK) {
+            photoFile?.let { file ->
+                if (file.exists()) {
+                    uploadedFiles.add(file)
+                    Toast.makeText(this, "Foto ditambahkan ke upload list", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == REQUEST_CAMERA_PERMISSION) {
+            if ((grantResults.isNotEmpty() &&
+                        grantResults[0] == PackageManager.PERMISSION_GRANTED)
+            ) {
+                dispatchTakePictureIntent()
+            } else {
+                Toast.makeText(this, "Camera Permission Denied", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    // ====================================
+    //    CEK EMAIL VERIFIED
+    // ====================================
+    private fun checkEmailVerification(currentUser: com.google.firebase.auth.FirebaseUser) {
+        currentUser.reload().addOnCompleteListener { task ->
+            if (task.isSuccessful) {
+                if (!currentUser.isEmailVerified) {
+                    AlertDialog.Builder(this)
+                        .setTitle("Email Not Verified")
+                        .setMessage("Please verify your email before using the dashboard.")
+                        .setPositiveButton("Resend Verification") { _, _ ->
+                            currentUser.sendEmailVerification()
+                                .addOnSuccessListener {
+                                    Toast.makeText(
+                                        this,
+                                        "Verification Email Sent.",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                                .addOnFailureListener {
+                                    Toast.makeText(
+                                        this,
+                                        "Failed sending email. Try again later.",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                        }
+                        .setNegativeButton("OK") { _, _ -> }
+                        .setOnDismissListener {
+                            auth.signOut()
+                            showLoggedOutUI()
+                        }
+                        .show()
+                } else {
+                    showLoggedInUI()
+                    loadChatSessions()
+                }
+            } else {
+                Toast.makeText(this, "Error reloading user", Toast.LENGTH_SHORT).show()
+                Log.e(TAG, "Failed reloading user: ${task.exception}")
+            }
+        }
+    }
+
     private fun updateMenuItems() {
         val menu = navigationView.menu
         val isLoggedIn = auth.currentUser != null
-
         menu.findItem(R.id.menu_login)?.isVisible = !isLoggedIn
         menu.findItem(R.id.menu_logout)?.isVisible = isLoggedIn
     }
 
     private fun showLoggedInUI() {
-        // Menampilkan elemen UI untuk user yang login
         updateMenuItems()
     }
 
     private fun showLoggedOutUI() {
-        // Menampilkan dialog login/register
         updateMenuItems()
         showLoginRegisterDialog()
     }
 
     private fun showLoginRegisterDialog() {
         val dialog = Dialog(this)
-        val view = LayoutInflater.from(this).inflate(R.layout.dialog_login_register, null, false)
+        val view = layoutInflater.inflate(R.layout.dialog_login_register, null, false)
         dialog.setContentView(view)
 
-        // Set dialog dimensions
         dialog.window?.setLayout(
             (resources.displayMetrics.widthPixels * 0.85).toInt(),
             LinearLayout.LayoutParams.WRAP_CONTENT
@@ -232,7 +313,6 @@ class MainActivity : AppCompatActivity() {
             startActivity(Intent(this, LoginActivity::class.java))
             dialog.dismiss()
         }
-
         registerButton.setOnClickListener {
             startActivity(Intent(this, RegisterActivity::class.java))
             dialog.dismiss()
@@ -241,320 +321,191 @@ class MainActivity : AppCompatActivity() {
         dialog.show()
     }
 
-    private fun createNewChatSession(onSessionCreated: () -> Unit) {
-        val currentUser = auth.currentUser ?: return
-
-        val chatMap = hashMapOf(
-            "userId" to currentUser.uid,
-            "timestamp" to System.currentTimeMillis(),
-            "messages" to emptyList<Map<String, Any>>()
-        )
-
-        firestore.collection("chats")
-            .add(chatMap)
-            .addOnSuccessListener { documentReference ->
-                currentChatId = documentReference.id
-                Toast.makeText(this, "Sesi percakapan baru dibuat.", Toast.LENGTH_SHORT).show()
-                loadChatSessions()
-                onSessionCreated()
-                Log.d(TAG, "New chat session created with ID: $currentChatId")
-            }
-            .addOnFailureListener { e ->
-                Toast.makeText(this, "Gagal membuat sesi percakapan: ${e.message}", Toast.LENGTH_SHORT).show()
-                Log.e(TAG, "Failed to create chat session", e)
-            }
-    }
-
+    // ====================================
+    //  LOAD & DISPLAY SESSIONS
+    // ====================================
     private fun loadChatSessions() {
-        currentUserId?.let { userId ->
-            firestore.collection("chats")
-                .whereEqualTo("userId", userId)
-                .orderBy("timestamp", Query.Direction.DESCENDING)
-                .addSnapshotListener { snapshots, error ->
-                    if (error != null) {
-                        Toast.makeText(this, "Error loading chat sessions: ${error.message}", Toast.LENGTH_SHORT).show()
-                        Log.e(TAG, "Error loading chat sessions", error)
-                        return@addSnapshotListener
-                    }
-
-                    if (snapshots != null) {
-                        chatSessionsList.clear()
-                        val menu = navigationView.menu
-                        val chatSessionsMenu = menu.findItem(R.id.menu_chat_sessions_heading)?.subMenu
-                        chatSessionsMenu?.clear()
-
-                        for ((index, doc) in snapshots.documents.withIndex()) {
-                            val chatSession = ChatSession(
-                                id = doc.id,
-                                userId = doc.getString("userId") ?: "",
-                                timestamp = doc.getLong("timestamp") ?: 0L,
-                                messages = emptyList()
-                            )
-                            chatSessionsList.add(chatSession)
-
-                            // Tambahkan setiap sesi chat sebagai item menu
-                            val menuItemId = MENU_ITEM_CHAT_SESSION_BASE_ID + index
-                            chatSessionsMenu?.add(Menu.NONE, menuItemId, Menu.NONE, "Chat ${index + 1}")
-                                ?.setIcon(R.drawable.ic_chat_session)
-                        }
-
-                        // Load sesi chat terbaru secara default
-                        if (chatSessionsList.isNotEmpty() && currentChatId == null) {
-                            switchChatSession(chatSessionsList[0])
-                        }
-                        Log.d(TAG, "Loaded ${chatSessionsList.size} chat sessions")
-                    }
+        activityScope.launch {
+            val currentUser = auth.currentUser ?: return@launch
+            try {
+                val idTokenResult = currentUser.getIdToken(false).await()
+                val idToken = idTokenResult.token ?: ""
+                if (idToken.isEmpty()) {
+                    Toast.makeText(
+                        this@MainActivity,
+                        "User not authenticated",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                    return@launch
                 }
+
+                val response = RetrofitClient.instance.getChatSessions("Bearer $idToken")
+                if (response.isSuccessful) {
+                    val body = response.body()
+                    body?.let {
+                        chatSessionsList.clear()
+                        chatSessionsList.addAll(it.sessions)
+                        populateChatSessionsToDrawer()
+                        // Otomatis buka session pertama jika ada
+                        if (it.sessions.isNotEmpty()) {
+                            switchChatSession(it.sessions[0])
+                        }
+                    }
+                } else {
+                    Toast.makeText(
+                        this@MainActivity,
+                        "Gagal memuat sesi percakapan",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            } catch (e: Exception) {
+                Toast.makeText(this@MainActivity, e.message, Toast.LENGTH_SHORT).show()
+                Log.e(TAG, "Exception loadChatSessions: ${e.message}", e)
+            }
         }
     }
 
+    private fun populateChatSessionsToDrawer() {
+        val menu = navigationView.menu
+        val chatSessionsMenu = menu.findItem(R.id.menu_chat_sessions_heading)?.subMenu
+        chatSessionsMenu?.clear()
+
+        chatSessionsList.forEachIndexed { index, session ->
+            val menuItemId = MENU_ITEM_CHAT_SESSION_BASE_ID + index
+            val sessionTitle = session.judul ?: "Untitled"
+            chatSessionsMenu?.add(Menu.NONE, menuItemId, Menu.NONE, sessionTitle)
+                ?.setIcon(R.drawable.ic_chat_session)
+        }
+        messageAdapter.notifyDataSetChanged()
+    }
+
+    private fun clearSessionState() {
+        currentChatId = null
+        messagesList.clear()
+        messageAdapter.notifyDataSetChanged()
+        uploadedFiles.clear()
+        messageInput.setText("")
+        Toast.makeText(this, "New session started", Toast.LENGTH_SHORT).show()
+    }
+
     private fun switchChatSession(chatSession: ChatSession) {
-        // Clear current messages
         messagesList.clear()
         messageAdapter.notifyDataSetChanged()
 
-        // Remove previous listener
-        messagesListener?.remove()
-
-        currentChatId = chatSession.id
-        Log.d(TAG, "Switched to chat session ID: $currentChatId")
-
-        listenForMessages()
+        currentChatId = chatSession.sessionId
+        fetchMessages(chatSession.sessionId ?: "")
     }
 
-    private fun listenForMessages() {
-        if (currentChatId == null) return
-
-        messagesListener = firestore.collection("chats")
-            .document(currentChatId!!)
-            .addSnapshotListener { snapshot, error ->
-                if (error != null) {
-                    Toast.makeText(this, "Error: ${error.message}", Toast.LENGTH_SHORT).show()
-                    Log.e(TAG, "Error listening for messages", error)
-                    return@addSnapshotListener
+    private fun fetchMessages(sessionId: String) {
+        activityScope.launch {
+            val currentUser = auth.currentUser ?: return@launch
+            try {
+                val idTokenResult = currentUser.getIdToken(false).await()
+                val idToken = idTokenResult.token ?: ""
+                if (idToken.isEmpty()) {
+                    Toast.makeText(
+                        this@MainActivity,
+                        "User not authenticated",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                    return@launch
                 }
 
-                if (snapshot != null && snapshot.exists()) {
-                    val messagesData = snapshot.get("messages")
-                    messagesList.clear()
-                    if (messagesData is List<*>) {
-                        messagesData.forEach { msgData ->
-                            val msg = msgData as? Map<*, *>
-                            if (msg != null) {
-                                val role = msg["role"] as? String ?: "user"
-                                val contentAny = msg["content"]
-                                val imgUrlsAny = msg["img_urls"]
-                                val imgUrls = (imgUrlsAny as? List<*>)?.filterIsInstance<String>() ?: emptyList()
-
-                                val formattedContent = when (contentAny) {
-                                    is String -> contentAny
-                                    is List<*> -> {
-                                        val contentBuilder = StringBuilder()
-                                        contentAny.forEach { item ->
-                                            when (item) {
-                                                is Map<*, *> -> {
-                                                    val type = item["type"] as? String
-                                                    when (type) {
-                                                        "text" -> {
-                                                            val text = item["text"] as? String
-                                                            if (text != null) {
-                                                                contentBuilder.append("$text\n")
-                                                            }
-                                                        }
-                                                        "image_url" -> {
-                                                            val imageUrlMap = item["image_url"] as? Map<*, *>
-                                                            val url = imageUrlMap?.get("url") as? String
-                                                            if (url != null) {
-                                                                contentBuilder.append("[Image URL]: $url\n")
-                                                            }
-                                                        }
-                                                    }
-                                                }
-                                                is String -> contentBuilder.append("$item\n")
-                                                else -> {}
-                                            }
-                                        }
-                                        contentBuilder.toString().trim()
-                                    }
-                                    else -> ""
-                                }
-
-                                val message = Message(
-                                    role = role,
-                                    content = formattedContent,
-                                    img_urls = imgUrls
-                                )
-                                messagesList.add(message)
-                                Log.d(TAG, "Message added: $message")
-                            } else {
-                                Log.e(TAG, "Invalid message format: $msgData")
-                            }
-                        }
-                    } else {
-                        Log.e(TAG, "messagesData is not a List: $messagesData")
+                val response = RetrofitClient.instance.getChatMessages("Bearer $idToken", sessionId)
+                if (response.isSuccessful) {
+                    val body = response.body()
+                    body?.let {
+                        messagesList.clear()
+                        messagesList.addAll(it.messages)
+                        messageAdapter.notifyDataSetChanged()
+                        recyclerView.scrollToPosition(messagesList.size - 1)
                     }
-
-                    messageAdapter.updateMessages(messagesList)
-                    recyclerView.scrollToPosition(messagesList.size - 1)
-                    Log.d(TAG, "Updated messages list with ${messagesList.size} messages")
+                } else {
+                    Toast.makeText(
+                        this@MainActivity,
+                        "Gagal memuat pesan",
+                        Toast.LENGTH_SHORT
+                    ).show()
                 }
+            } catch (e: Exception) {
+                Toast.makeText(this@MainActivity, e.message, Toast.LENGTH_SHORT).show()
+                Log.e(TAG, "fetchMessages error: ${e.message}", e)
             }
+        }
     }
 
+    // ====================================
+    //      SEND MESSAGE
+    // ====================================
     private fun sendMessage() {
-        val text = messageInput.text.toString().trim()
-        if (text.isEmpty()) {
+        val text = messageInput.text?.toString()?.trim() ?: ""
+        if (text.isEmpty() && uploadedFiles.isEmpty()) {
             Toast.makeText(this, "Pesan tidak boleh kosong", Toast.LENGTH_SHORT).show()
             return
         }
 
-        if (auth.currentUser == null) {
+        val currentUser = auth.currentUser
+        if (currentUser == null) {
             Toast.makeText(this, "Anda harus login terlebih dahulu", Toast.LENGTH_SHORT).show()
             return
         }
 
-        if (currentChatId == null) {
-            // Create a new chat session and then send the message
-            createNewChatSession {
-                sendMessageToFirestore(text)
-            }
-        } else {
-            sendMessageToFirestore(text)
-        }
-    }
+        val sessionIdForAPI = currentChatId ?: ""
 
-    private fun sendMessageToFirestore(text: String) {
-        val userMessage = mapOf(
-            "role" to "user",
-            "content" to text,
-            "img_urls" to emptyList<String>()
-        )
-
-        firestore.collection("chats")
-            .document(currentChatId!!)
-            .update("messages", FieldValue.arrayUnion(userMessage))
-            .addOnSuccessListener {
-                messageInput.text?.clear()
-                sendToOpenAI(userMessage)
-                Log.d(TAG, "User message sent to Firestore")
-            }
-            .addOnFailureListener {
-                Toast.makeText(this, "Gagal mengirim pesan", Toast.LENGTH_SHORT).show()
-                Log.e(TAG, "Failed to send user message to Firestore", it)
-            }
-    }
-
-    private fun sendToOpenAI(userMessage: Map<String, Any>) {
-        val apiUrl = "https://api.openai.com/v1/"
-
-        // Inisialisasi OkHttpClient dengan timeout yang ditingkatkan
-        val okHttpClient = OkHttpClient.Builder()
-            .connectTimeout(60, TimeUnit.SECONDS)
-            .readTimeout(60, TimeUnit.SECONDS)
-            .writeTimeout(60, TimeUnit.SECONDS)
-            .build()
-
-        // Inisialisasi Retrofit dengan OkHttpClient yang telah dikonfigurasi
-        val retrofit = Retrofit.Builder()
-            .baseUrl(apiUrl)
-            .client(okHttpClient) // Menggunakan OkHttpClient dengan timeout yang ditingkatkan
-            .addConverterFactory(GsonConverterFactory.create())
-            .build()
-
-        val service = retrofit.create(OpenAIService::class.java)
-
-        // Membuat JSON payload sesuai dengan format OpenAI API menggunakan Gson
-        val messagesArray = JsonArray()
-
-        val userMessageObject = JsonObject()
-        userMessageObject.addProperty("role", userMessage["role"] as String)
-        userMessageObject.addProperty("content", userMessage["content"] as String)
-
-        messagesArray.add(userMessageObject)
-
-        val payload = JsonObject()
-        payload.addProperty("model", "gpt-4") // Pastikan model ini valid
-        payload.add("messages", messagesArray)
-        payload.addProperty("max_tokens", 300)
-
-        // Membuat header Authorization
-        val authHeader = "Bearer $openAIAPIKey"
-
-        // Mengirim permintaan
-        service.sendMessage(authHeader, payload)
-            .enqueue(object : Callback<JsonObject> {
-                override fun onResponse(call: Call<JsonObject>, response: Response<JsonObject>) {
-                    if (response.isSuccessful) {
-                        response.body()?.let { handleOpenAIResponse(it) }
-                        Log.d(TAG, "OpenAI response successful")
-                    } else {
-                        Toast.makeText(this@MainActivity, "Error: ${response.message()}", Toast.LENGTH_SHORT).show()
-                        Log.e(TAG, "OpenAI response error: ${response.message()}")
-                    }
+        activityScope.launch {
+            try {
+                val idTokenResult = currentUser.getIdToken(false).await()
+                val idToken = idTokenResult.token ?: ""
+                if (idToken.isEmpty()) {
+                    Toast.makeText(
+                        this@MainActivity,
+                        "User not authenticated",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                    return@launch
                 }
 
-                override fun onFailure(call: Call<JsonObject>, t: Throwable) {
-                    Toast.makeText(this@MainActivity, "Error: ${t.message}", Toast.LENGTH_SHORT).show()
-                    Log.e(TAG, "Failed to send message to OpenAI", t)
+                // Buat multipart form data
+                val formData = MultipartBody.Builder().setType(MultipartBody.FORM)
+                    .addFormDataPart("content", text)
+                    .addFormDataPart("sessionId", sessionIdForAPI)
+
+                uploadedFiles.forEach { file ->
+                    val reqFile = file.asRequestBody("image/*".toMediaTypeOrNull())
+                    formData.addFormDataPart("images", file.name, reqFile)
                 }
-            })
-    }
+                val requestBody = formData.build()
 
-    private fun handleOpenAIResponse(response: JsonObject) {
-        try {
-            Log.d(TAG, "Handling OpenAI response")
-            val choices = response.getAsJsonArray("choices")
-            if (choices.size() > 0) {
-                val choice = choices.get(0).asJsonObject
-                val message = choice.getAsJsonObject("message")
-
-                val role = message.get("role").asString
-                val content = message.get("content").asString
-                val imgUrls = if (message.has("img_urls")) {
-                    val jsonArray = message.getAsJsonArray("img_urls")
-                    mutableListOf<String>().apply {
-                        for (i in 0 until jsonArray.size()) {
-                            add(jsonArray.get(i).asString)
-                        }
-                    }
-                } else {
-                    emptyList<String>()
-                }
-
-                val assistantMessage = mapOf(
-                    "role" to role,
-                    "content" to content,
-                    "img_urls" to imgUrls
+                val response = RetrofitClient.instance.sendMessageRaw(
+                    "Bearer $idToken",
+                    requestBody
                 )
 
-                if (currentChatId == null) {
-                    Toast.makeText(this, "Sesi percakapan belum dibuat.", Toast.LENGTH_SHORT).show()
-                    Log.e(TAG, "Current chat ID is null while adding assistant message")
-                    return
+                if (response.isSuccessful) {
+                    val respBody = response.body()
+                    val assistantMessage = respBody?.assistantMessage
+                    if (assistantMessage != null) {
+                        messagesList.add(assistantMessage)
+                        messageAdapter.notifyItemInserted(messagesList.size - 1)
+                        recyclerView.scrollToPosition(messagesList.size - 1)
+                    }
+                    // Bersihkan input
+                    messageInput.text?.clear()
+                    uploadedFiles.clear()
+                    messageAdapter.notifyDataSetChanged()
+                } else {
+                    Toast.makeText(this@MainActivity, "Gagal mengirim pesan", Toast.LENGTH_SHORT).show()
                 }
-
-                firestore.collection("chats")
-                    .document(currentChatId!!)
-                    .update("messages", FieldValue.arrayUnion(assistantMessage))
-                    .addOnSuccessListener {
-                        // Pesan asisten berhasil ditambahkan
-                        Log.d(TAG, "Assistant message added to Firestore")
-                    }
-                    .addOnFailureListener {
-                        Toast.makeText(this, "Gagal menambahkan pesan asisten", Toast.LENGTH_SHORT).show()
-                        Log.e(TAG, "Failed to add assistant message to Firestore", it)
-                    }
+            } catch (e: Exception) {
+                Toast.makeText(this@MainActivity, e.message, Toast.LENGTH_SHORT).show()
+                Log.e(TAG, "sendMessage error: ${e.message}", e)
             }
-        } catch (e: Exception) {
-            Toast.makeText(this, "Error parsing response: ${e.message}", Toast.LENGTH_SHORT).show()
-            Log.e(TAG, "Error parsing OpenAI response", e)
         }
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        // Hapus listener jika sudah diinisialisasi
-        messagesListener?.remove()
-        Log.d(TAG, "MainActivity destroyed and listener removed")
+        activityScope.cancel()
+        Log.d(TAG, "MainActivity destroyed and coroutine scope cancelled")
     }
 }
